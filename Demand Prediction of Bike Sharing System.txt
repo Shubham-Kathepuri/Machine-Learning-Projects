@@ -1,0 +1,139 @@
+library(dplyr)
+library(corrplot)
+library(ggplot2)
+library(stats)
+library(tidyverse)
+library(RColorBrewer)
+library(ggplot2)
+library(MASS)
+library(e1071)
+library(caTools)
+library(caret)
+library(scorer)
+library(pROC)
+library(rpart.plot)
+#Read CSV
+bike_sharing = read.csv('hour.csv')
+names(bike_sharing)
+
+#----------------------------------------Renaming columns----------------------------------------------
+
+bike_sharing = bike_sharing %>% rename(year = yr,weather = weathersit,bike_count = cnt,month = mnth, temperature = temp)
+str(bike_sharing)
+
+
+sapply(bike_sharing,function(x)sum(is.na(x)))
+
+bike_sharing$season <- factor(format(bike_sharing$season, format="%A"),
+                              levels = c("1", "2","3","4") , labels = c("Spring","Summer","Fall","Winter"))
+table(bike_sharing$season)
+
+
+bike_sharing$holiday <- factor(format(bike_sharing$holiday, format="%A"),
+                               levels = c("0", "1") , labels = c("Working Day","Holiday"))
+table(bike_sharing$holiday)
+
+bike_sharing$weather <- factor(format(bike_sharing$weather, format="%A"),
+                               levels = c("1", "2","3","4") , 
+                               labels = c("Good:Clear/Sunny","Moderate:Cloudy/Mist","Bad: Rain/Snow/Fog","Worse: Heavy Rain/Snow/Fog"))
+table(bike_sharing$weather)
+
+bike_sharing$year <- factor(format(bike_sharing$year, format="%A"),
+                            levels = c("0", "1") , labels = c("2011","2012"))
+table(bike_sharing$year)
+
+#Boxplot for rental bikes per year
+ggplot(bike_sharing,aes(year,bike_count)) + geom_boxplot(fill = c("#8DD3C7","#FFFFB3")) + theme_classic() +
+  labs(title = "Boxplot of rental bikes per year") + scale_x_discrete(labels = c("2011","2012"))
+#Boxplot of rental bikes per season
+col <- brewer.pal(4,"Set3")
+ggplot(bike_sharing,aes(season,bike_count)) + geom_boxplot(fill = col) + theme_classic() +
+  labs(title = "Boxplot of rental bikes per season") + scale_x_discrete(labels = c("Spring","Summar","Fall","Winter"))
+
+#Boxplot of Rental Bikes By Holiday
+ggplot(bike_sharing,aes(holiday,bike_count)) + geom_boxplot(fill = c("#8DD3C7","#FFFFB3")) + theme_classic() +
+  labs(title = "Boxplot of Rental Bikes By Holiday") + scale_x_discrete(labels = c("no","yes"))
+
+#Boxplot of rental bikes by weather
+col <- brewer.pal(4,"Set3")
+ggplot(bike_sharing,aes(weather,bike_count)) + geom_boxplot(fill = col) + theme_classic() +
+  labs(title = "Boxplot of Rental bikes by Weather") +
+  scale_x_discrete(labels = c("Clear","Cloudy","Rain","Heavy Rain"))
+
+#Temperature factor influenced
+ggplot(bike_sharing,aes(bike_count,temperature)) + geom_point() + geom_smooth(method = "loess") + theme_classic()
+
+bike_sharing$weather = as.numeric(bike_sharing$weather)
+bike_sharing$year = as.numeric(bike_sharing$year)
+
+str(bike_sharing)
+num.cols <- sapply(bike_sharing, is.numeric)
+bike_sharingv1 = bike_sharing[, c('bike_count','temperature','weather','month','year')]
+
+cor.data = cor(bike_sharingv1)
+corrplot(cor.data, method = 'color' )
+
+any(is.na(bike_sharingv1))
+
+
+# Set a random see so your "random" results are the same as this notebook
+set.seed(124)
+# Split up the sample, basically randomly assigns a booleans to a new column "sample"
+sample <- sample.split(bike_sharingv1$bike_count, SplitRatio = 0.70) # SplitRatio = percent of sample==TRUE
+
+# Training Data
+train = subset(bike_sharingv1, sample == TRUE)
+# Testing Data
+test = subset(bike_sharingv1, sample == FALSE)
+
+#------------------------------------Random Forest-------------------
+library(randomForest)
+set.seed(124)
+regressor = randomForest(x = train[-1],
+                         y = train$bike_count,
+                         ntree = 500)
+summary(regressor)
+
+# Predicting a new result with Random Forest Regression
+y_pred = predict(regressor)
+
+mean_absolute_error(test$bike_count, y_pred)
+mean_squared_error(test$bike_count, y_pred)
+
+RMSE(y_pred, obs= test$bike_count)
+
+#------------------------------------Linear Regression-------------------
+regresor_ml = lm(formula = bike_count~., data =  train)
+summary(regresor_ml)
+
+
+y_pred_ml <- predict(regresor_ml, newdata = test)
+
+mean_absolute_error(test$bike_count, y_pred_ml)
+mean_squared_error(test$bike_count, y_pred_ml)
+
+RMSE(y_pred_ml, obs= test$bike_count)
+
+
+
+
+
+
+
+
+
+# Convert to DataFrame for gglpot
+res1 <- as.data.frame(res1)
+head(res1)
+ggplot(res1,aes(res1)) +  geom_histogram(fill='red',alpha=0.8)
+plot(dtr)
+
+bikecount_pred <- predict(dtr,test)
+results123 <- cbind(bikecount_pred,test$bike_count)
+colnames(results123) <- c('Predicted','Real')
+results123 <- as.data.frame(results123)
+results123
+library(scorer)
+mean_absolute_error(test$bike_count,bikecount_pred)
+mean_squared_error(test$bike_count,bikecount_pred)
+
